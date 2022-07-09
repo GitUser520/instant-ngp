@@ -62,11 +62,13 @@ std::string ngx_error_string(NVSDK_NGX_Result result) {
 	return converter.to_bytes(wstr);
 };
 
+#define NGP_NVSDK_NGX_FAILED(value) (((value) & 0xFFF00000) == (uint32_t)NVSDK_NGX_Result_Fail)
+
 /// Checks the result of a NVSDK_NGX_XXXXXX call and throws an error on failure
 #define NGX_CHECK_THROW(x)                                                                                            \
 	do {                                                                                                              \
 		NVSDK_NGX_Result result = x;                                                                                  \
-		if (NVSDK_NGX_FAILED(result))                                                                                 \
+		if (NGP_NVSDK_NGX_FAILED(result))                                                                                 \
 			throw std::runtime_error(std::string(FILE_LINE " " #x " failed with error ") + ngx_error_string(result)); \
 	} while(0)
 
@@ -424,7 +426,12 @@ size_t dlss_allocated_bytes() {
 		return 0;
 	}
 
-	NGX_CHECK_THROW(NGX_DLSS_GET_STATS(ngx_parameters, &allocated_bytes));
+	try {
+		NGX_CHECK_THROW(NGX_DLSS_GET_STATS(ngx_parameters, &allocated_bytes));
+	} catch (...) {
+		return 0;
+	}
+
 	return allocated_bytes;
 }
 
